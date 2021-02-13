@@ -54,7 +54,7 @@ class GMapsServices:
                 # Note that not all parks will have photos.
                 if index > 3:
                     break
-                file_name = f"photos/{key}_photo_{index}.jpg"
+                file_name = f"photos/{key[0].upper()}/{key}_photo_{index}.jpg"
                 with open(file_name, "wb") as handle:
                     response = requests.get(url, stream=True)
                     if not response.ok:
