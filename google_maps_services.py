@@ -2,6 +2,7 @@ import urllib.request, json
 from keys import NPS_API_KEY
 import requests
 from google_places import GPlaces
+from google_distance_matrix import GDistanceMatrix
 
 """
 A wrapper class than contains access to all the services in the Google Maps API.
@@ -12,6 +13,7 @@ class GMapsServices:
     def __init__(self, client):
         # Services.
         self.g_places = GPlaces(client=client)
+        self.g_distance_matrix = GDistanceMatrix(client=client)
 
     def _get_photo_urls(self, photos):
         return [photo["url"] for photo in photos]
@@ -168,12 +170,20 @@ class GMapsServices:
         with open(file_name, "w") as fp:
             json.dump(park_data_with_google, fp)
 
-    def rank_places_by_reviews(self):
+    def rank_places_by_reviews(self, limit=200):
         with open("data/park_data.json") as f:
             park_data_with_google = json.load(f)
+            park_data_with_google.pop('Ellis Island Part of Statue of Liberty National Monument') # duplicate
             sorted_by_num_ratings = sorted(
                 park_data_with_google.items(),
                 key=lambda x: x[1]["num_ratings"],
                 reverse=True,
             )
-            print(sorted_by_num_ratings)
+            for index, data in enumerate(sorted_by_num_ratings):
+                print(f"Rank: {index}, Ratings: {data[1]['num_ratings']}, Name: {data[0]}")
+            top_results = sorted_by_num_ratings[0:limit]
+            return [data[0] for data in top_results]
+
+    def compute_distances(self):
+        top_places = self.rank_places_by_reviews()
+        self.g_distance_matrix.build_distance_matrix(places=top_places)
