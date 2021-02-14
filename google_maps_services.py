@@ -140,6 +140,35 @@ class GMapsServices:
             index += 1
         return park_info
 
+    def get_nearest_city_to_place(
+        self, place_id, city_place_ids_to_parks_distances, place_ids_to_city
+    ):
+        """
+        For each park, get the nearest city and distance to nearest city. Store in park_place_id_to_nearest_city.json
+        :param place_id: The Google place_id of the park.
+        :param city_place_ids_to_parks_distances: Dict where key is a city place_id, val is a dict of park place_ids and distances.
+        :param place_ids_to_city: A dict mapping place_ids to city names.
+        :return: A tuple containing the nearest dist (in km) and nearest city name.
+        """
+        nearest_dist = "N/A"
+        nearest_city = "N/A"
+        for city_id, distances in city_place_ids_to_parks_distances.items():
+            try:
+                distance = distances[place_id]
+            except KeyError as ke:
+                print(f"No route from park {place_id} to {place_ids_to_city[city_id]}")
+                continue
+            if distance == "N/A":
+                continue
+            elif nearest_dist == "N/A":
+                nearest_dist = distance
+                nearest_city = place_ids_to_city[city_id]
+            else:
+                if distance < nearest_dist:
+                    nearest_dist = distance
+                    nearest_city = place_ids_to_city[city_id]
+        return nearest_dist, nearest_city
+
     def get_nps_raw_park_data(self, save_photos=False):
         """
         Make request to NPS API to get all park data. Saves data in data/nps_raw_park_data.json file.
@@ -261,7 +290,7 @@ class GMapsServices:
 
     def map_place_id_to_park_name(self):
         """
-        Create a json mapping place_id to city based on the cities_to_place_id dictionary.
+        Create a json mapping place_id to park based on the park_data dictionary.
         :return: None
         """
         with open("data/park_data.json") as f:
@@ -271,7 +300,36 @@ class GMapsServices:
         with open(file_name, "w") as fp:
             json.dump(place_id_to_park_name, fp)
 
+    def compute_nearest_city_for_each_park_place_id(self):
+        """
+        Create a dictionary that has the nearest city and distance to city for each park place_id.
+        :return: None
+        """
+        with open("data/place_ids_to_city.json") as f:
+            place_ids_to_city = json.load(f)
+        with open("data/city_place_ids_to_parks_distances.json") as f2:
+            city_to_park_distances = json.load(f2)
+        with open("data/place_ids_to_park_name.json") as f3:
+            place_ids_to_parks = json.load(f3)
+        with open("data/park_distances.json") as f4:
+            park_distances = json.load(f4)
+        park_ids = list(park_distances.keys())
 
+        park_id_to_nearest_city = {}
+        for park_id in park_ids:
+            nearest_dist, nearest_city = self.get_nearest_city_to_place(
+                place_id=park_id,
+                city_place_ids_to_parks_distances=city_to_park_distances,
+                place_ids_to_city=place_ids_to_city,
+            )
+            park_id_to_nearest_city[park_id] = {
+                "park_name": place_ids_to_parks[park_id],
+                "distance_to_city": nearest_dist,
+                "nearest_city": nearest_city,
+            }
+        file_name = "data/park_id_to_nearest_city.json"
+        with open(file_name, "w") as fp:
+            json.dump(park_id_to_nearest_city, fp)
 
     def compute_distances_for_cities(self, get_city_place_ids=False):
         """
