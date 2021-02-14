@@ -1,4 +1,5 @@
 import json
+import os
 from keys import NPS_API_KEY
 import requests
 import pandas as pd
@@ -23,6 +24,15 @@ class GMapsServices:
         :return: A list of strings, where each string is the photo's url.
         """
         return [photo["url"] for photo in photos]
+
+    def _get_new_info_dict(self, name, info):
+        info["name"] = name
+        first_letter = name[0].upper()
+        photo_list = sorted(os.listdir(f"photos/{first_letter}"))
+        matching_photos = [x for x in photo_list if x.startswith(name)]
+        info["local_photos"] = matching_photos
+        info.pop("place_id")
+        return info
 
     def _get_usa_national_parks_request(self):
         """
@@ -348,3 +358,23 @@ class GMapsServices:
         """
         top_places = self.rank_places_by_reviews()
         self.g_distance_matrix.build_distance_matrix(places=top_places)
+
+    def clean_park_data(self):
+        with open("data/park_data.json") as f:
+            park_data = json.load(f)
+        with open("data/park_distances.json") as f2:
+            park_distances = json.load(f2)
+        # Change park data to use the place_id as key.
+        cleaned_park_data = {}
+        for key in park_data.keys():
+            info = park_data[key]
+            place_id = info["place_id"]
+            cleaned_info = self._get_new_info_dict(name=key, info=info)
+            cleaned_park_data[place_id] = cleaned_info
+        cleaned_park_data_keys = list(cleaned_park_data.keys())
+        for key in cleaned_park_data_keys:
+            if key not in park_distances:
+                cleaned_park_data.pop(key)
+        file_name = "data/park_id_to_park_info.json"
+        with open(file_name, "w") as fp:
+            json.dump(cleaned_park_data, fp)
