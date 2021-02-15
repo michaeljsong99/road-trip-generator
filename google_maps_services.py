@@ -391,7 +391,7 @@ class GMapsServices:
         with open(file_name, "w") as fp:
             json.dump(cleaned_park_data, fp)
 
-    def generate_relative_ratings(self, max_bonus_score=2):
+    def generate_relative_ratings(self, max_bonus_score=4):
         """
         The idea is that a park's rating should be dependent on both avg. rating and # of reviews.
         More popular parks should get bonus points.
@@ -411,9 +411,46 @@ class GMapsServices:
             bonus = max_bonus_score * (
                 1 - (park_id_to_review_rank[park_id] / total_parks)
             )
+            if (
+                park_id_to_park_info[park_id]["designation"] == "National Park"
+                or park_id_to_park_info[park_id]["name"]
+                == "Sequoia & Kings Canyon National Parks"
+            ):
+                bonus += 1
             park_id_to_park_info[park_id]["blended_rating"] = (
                 park_id_to_park_info[park_id]["rating"] + bonus
             )
         file_name = "data/park_id_to_park_info.json"
         with open(file_name, "w") as fp:
             json.dump(park_id_to_park_info, fp)
+
+    def suggest_next_parks(self):
+        """
+        For each park, we generate a sorted list of most optimal next parks.
+        The metric we use is blended_rating / distance.
+        :return:
+        """
+        with open("data/park_id_to_park_info.json") as f:
+            park_id_to_park_info = json.load(f)
+        with open("data/park_distances.json") as f2:
+            park_distances = json.load(f2)
+        park_id_to_suggestions = {}
+        for park_id, distances in park_distances.items():
+            suggestions = []
+            for dest_id, dist in distances.items():
+                if dist != "N/A" and dist <= 1000:  # Filter out long paths.
+                    metric = park_id_to_park_info[dest_id]["blended_rating"] / dist
+                    suggestions.append((dest_id, metric))
+            sorted_suggestions = sorted(suggestions, key=lambda x: x[1], reverse=True)
+            suggestion_ids = [x[0] for x in sorted_suggestions]
+
+            # Testing:
+            print(f"Current park is: {park_id_to_park_info[park_id]['name']}")
+            for i in range(0, min(5, len(suggestion_ids))):
+                print(
+                    f"Suggestion {i+1} is: {park_id_to_park_info[suggestion_ids[i]]['name']}"
+                )
+            park_id_to_suggestions[park_id] = suggestion_ids
+        file_name = "data/park_id_suggestions.json"
+        with open(file_name, "w") as fp:
+            json.dump(park_id_to_suggestions, fp)
