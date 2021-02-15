@@ -267,13 +267,10 @@ class GMapsServices:
         """
         Given a limit, retrieve the top {limit} places in the park_data.json file by number of reviews.
         :param limit: The top number of rows.
-        :return: A list of the names of the top {limit} places.
+        :return: A list of the park_ids of the top {limit} places.
         """
-        with open("data/park_data.json") as f:
+        with open("data/park_id_to_park_info.json") as f:
             park_data_with_google = json.load(f)
-            park_data_with_google.pop(
-                "Ellis Island Part of Statue of Liberty National Monument"
-            )  # duplicate
             sorted_by_num_ratings = sorted(
                 park_data_with_google.items(),
                 key=lambda x: x[1]["num_ratings"],
@@ -281,9 +278,24 @@ class GMapsServices:
             )
             for index, data in enumerate(sorted_by_num_ratings):
                 print(
-                    f"Rank: {index}, Ratings: {data[1]['num_ratings']}, Name: {data[0]}"
+                    f"Rank: {index}, Ratings: {data[1]['num_ratings']}, Place_id: {data[0]}"
                 )
             top_results = sorted_by_num_ratings[0:limit]
+            return [data[0] for data in top_results]
+
+    def rank_places_by_blended_rating(self, limit=200):
+        with open("data/park_id_to_park_info.json") as f:
+            park_data_with_google = json.load(f)
+            sorted_by_blended_rating = sorted(
+                park_data_with_google.items(),
+                key=lambda x: x[1]["blended_rating"],
+                reverse=True,
+            )
+            for index, data in enumerate(sorted_by_blended_rating):
+                print(
+                    f"Rank: {index}, Blended Rating: {data[1]['blended_rating']}, Name: {data[1]['name']}"
+                )
+            top_results = sorted_by_blended_rating[0:limit]
             return [data[0] for data in top_results]
 
     def map_place_id_to_cities(self):
@@ -378,3 +390,30 @@ class GMapsServices:
         file_name = "data/park_id_to_park_info.json"
         with open(file_name, "w") as fp:
             json.dump(cleaned_park_data, fp)
+
+    def generate_relative_ratings(self, max_bonus_score=2):
+        """
+        The idea is that a park's rating should be dependent on both avg. rating and # of reviews.
+        More popular parks should get bonus points.
+        We normalize the number of reviews on a scale from 0-1. Then take that score, and multiply
+        by a max bonus score.
+        We add this bonus score to the base rating to generate a new score for each park.
+        :return: None
+        """
+        with open("data/park_id_to_park_info.json") as f:
+            park_id_to_park_info = json.load(f)
+        num_review_list = self.rank_places_by_reviews()
+        park_id_to_review_rank = {}
+        for index, park_id in enumerate(num_review_list):
+            park_id_to_review_rank[park_id] = index
+        total_parks = len(num_review_list)
+        for park_id in park_id_to_park_info.keys():
+            bonus = max_bonus_score * (
+                1 - (park_id_to_review_rank[park_id] / total_parks)
+            )
+            park_id_to_park_info[park_id]["blended_rating"] = (
+                park_id_to_park_info[park_id]["rating"] + bonus
+            )
+        file_name = "data/park_id_to_park_info.json"
+        with open(file_name, "w") as fp:
+            json.dump(park_id_to_park_info, fp)
