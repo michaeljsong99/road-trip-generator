@@ -454,3 +454,63 @@ class GMapsServices:
         file_name = "data/park_id_suggestions.json"
         with open(file_name, "w") as fp:
             json.dump(park_id_to_suggestions, fp)
+
+    def suggest_parks_from_city(self):
+        """
+        For each city, we generate a sorted list of most optimal next parks.
+        The metric we use is blended_rating / distance.
+        :return:
+        """
+        with open("data/park_id_to_park_info.json") as f:
+            park_id_to_park_info = json.load(f)
+        with open("data/city_place_ids_to_parks_distances.json") as f2:
+            city_to_park_distances = json.load(f2)
+        with open("data/place_ids_to_city.json") as f3:
+            place_ids_to_city = json.load(f3)
+        city_id_to_suggestions = {}
+        for city_id, distances in city_to_park_distances.items():
+            suggestions = []
+            for dest_id, dist in distances.items():
+                if dist != "N/A" and dist <= 1500:  # Filter out long paths.
+                    metric = park_id_to_park_info[dest_id]["blended_rating"] / dist
+                    suggestions.append((dest_id, metric))
+            sorted_suggestions = sorted(suggestions, key=lambda x: x[1], reverse=True)
+            suggestion_ids = [x[0] for x in sorted_suggestions]
+
+            # Testing:
+            print(f"Current city is: {place_ids_to_city[city_id]}")
+            for i in range(0, min(5, len(suggestion_ids))):
+                print(
+                    f"Suggestion {i+1} is: {park_id_to_park_info[suggestion_ids[i]]['name']}"
+                )
+            city_id_to_suggestions[city_id] = suggestion_ids
+        file_name = "data/city_place_ids_to_park_suggestions.json"
+        with open(file_name, "w") as fp:
+            json.dump(city_id_to_suggestions, fp)
+
+    def park_ids_to_parks_within_distance(self, radius=30):
+        """
+        Because we want our road trip to actually include driving, we don't want to allow
+        places within 30km of each other in the same road trip.
+        Generate a dictionary such that if a park is visited, we have a list of other parks that
+        cannot be visited on the same road trip.
+        :param radius: Driving distance, in km.
+        :return: None
+        """
+        park_id_to_unvisitable_parks = {}
+        with open("data/park_distances.json") as f:
+            park_distances = json.load(f)
+        with open("data/park_id_to_park_info.json") as f2:
+            park_id_to_park_info = json.load(f2)
+        for park_id, distances in park_distances.items():
+            unvisitable_parks = []
+            for dest, distance in distances.items():
+                if distance != "N/A" and distance <= radius:
+                    unvisitable_parks.append(dest)
+            print(f"Current Park is: {park_id_to_park_info[park_id]['name']}")
+            for p in unvisitable_parks:
+                print(f"Too close park: {park_id_to_park_info[p]['name']}")
+            park_id_to_unvisitable_parks[park_id] = unvisitable_parks
+        file_name = "data/park_id_to_unvisitable_parks.json"
+        with open(file_name, "w") as fp:
+            json.dump(park_id_to_unvisitable_parks, fp)
