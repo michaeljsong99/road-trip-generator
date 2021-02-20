@@ -43,7 +43,10 @@ class Lookup:
         :param city_name: The city name.
         :return: The city's place_id.
         """
-        return self._cities_to_place_id[city_name]
+        try:
+            return self._cities_to_place_id[city_name]
+        except LookupError as le:
+            raise LookupError("Invalid city name provided.")
 
     def lookup_park_name(self, place_id):
         """
