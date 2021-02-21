@@ -80,6 +80,30 @@ class Lookup:
             self._park_id_to_park_info[place_id]["longitude"],
         )
 
+    def lookup_park_state(self, place_id):
+        """
+        Returns the state code the park is in.
+        :param place_id: park's place_id
+        :return: the two letter state code.
+        """
+        return self._park_id_to_park_info[place_id]["state"]
+
+    def lookup_park_rating(self, place_id):
+        """
+        Returns the park's average google rating.
+        :param place_id: park's place_id
+        :return: average google rating (out of 5)
+        """
+        return self._park_id_to_park_info[place_id]["rating"]
+
+    def lookup_park_num_ratings(self, place_id):
+        """
+        Returns the park's number of google ratings.
+        :param place_id: park's place_id
+        :return: number of google ratings
+        """
+        return self._park_id_to_park_info[place_id]["num_ratings"]
+
     ##########################################
     # Distance-based lookups
     ##########################################
