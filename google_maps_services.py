@@ -514,3 +514,42 @@ class GMapsServices:
         file_name = "data/park_id_to_unvisitable_parks.json"
         with open(file_name, "w") as fp:
             json.dump(park_id_to_unvisitable_parks, fp)
+
+    def choose_one_state(self):
+        """
+        Because some parks can be listed in multiple states, we assign one principal state to each park.
+        This is so we can avoid running back and forth between the same states later.
+        :return: None
+        """
+        with open("data/park_id_to_park_info.json") as f:
+            park_id_to_park_info = json.load(f)
+        for park_id, info in park_id_to_park_info.items():
+            park_name = info["name"]
+            park_state = info["state"]
+            if len(park_state) > 2:
+                park_name_to_state = {
+                    "Assateague Island National Seashore": "MD",
+                    "Big South Fork National River & Recreation Area": "TN",
+                    "Chesapeake & Ohio Canal National Historical Park": "MD",
+                    "Chickamauga & Chattanooga National Military Park": "GA",
+                    "Cumberland Gap National Historical Park": "KY",
+                    "Death Valley National Park": "CA",
+                    "Lower Delaware National Wild and Scenic River": "NJ",
+                    "Dinosaur National Monument": "UT",
+                    "Fort Smith National Historic Site": "AR",
+                    "Glen Canyon National Recreation Area": "AZ",
+                    "Great Smoky Mountains National Park": "TN",
+                    "Gulf Islands National Seashore": "MS",
+                    "Harpers Ferry National Historical Park": "WV",
+                    "Lake Mead National Recreation Area": "NV",
+                    "Lewis and Clark National Historical Park": "OR",
+                    "Saint Croix National Scenic Riverway": "WI",
+                    "Upper Delaware Scenic & Recreational River": "PA",
+                    "Vicksburg National Military Park": "MS",
+                    "Yellowstone National Park": "WY",
+                }
+                info["state"] = park_name_to_state[park_name]
+
+        file_name = "data/park_id_to_park_info.json"
+        with open(file_name, "w") as fp:
+            json.dump(park_id_to_park_info, fp)

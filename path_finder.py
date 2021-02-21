@@ -64,13 +64,16 @@ class PathFinder:
             <= distance_remaining
         )
 
-    def select_park_from_list(self, parks):
+    def select_park_from_list(self, parks, randomly=False):
         """
         Given a list of parks, choose one of them as the next destination. Parks near the front of the
         list should have a higher probability of being selected.
         :param parks: A list of park_ids, sorted in descending order of score.
+        :param parks: Wheter to randomly choose a park from the suggestions or not.
         :return: The park id of the selected place.
         """
+        if randomly:
+            return random.choice(parks)
         # Given that the sum of the infinite series 1/2 + 1/4 + 1/8... = 1,
         # we assign each park a probability of 1/(2^i), where i is its position in the array (starting from 1).
         # For any remaining probability, we add it to the first park.
@@ -157,6 +160,10 @@ class PathFinder:
                 "error": "Input distance was too small. Try expanding the input distance, or change the starting city."
             }
 
+    def reset_data(self):
+        self.path = []
+        self.distances = []
+
     def generate_path(self, starting_city, max_distance, num_suggestions=5):
         """
         Given a starting city and a path, generate a suggested road trip.
@@ -165,6 +172,7 @@ class PathFinder:
         :param num_suggestions: The max number of suggestions to return each time.
         :return: None. Store the path in self.path
         """
+        self.reset_data()
         # TODO: Later, support choosing the end city as well.
         starting_city_id = self.lookup.lookup_city_id(city_name=starting_city)
         self.path.append(starting_city_id)
@@ -179,7 +187,6 @@ class PathFinder:
         distance_remaining = max_distance
 
         while True:
-            print(unvisitable_states)
             if initial_suggestion:
                 suggestions = self.suggest_next_locations_from_city(
                     city_name=current_place,
@@ -211,7 +218,7 @@ class PathFinder:
                 park_ids = suggestions["parks"]
 
                 # Choose a destination in the list off of a given probability function.
-                next_dest = self.select_park_from_list(parks=park_ids)
+                next_dest = self.select_park_from_list(parks=park_ids, randomly=True)
                 next_dest_state = self.lookup.lookup_park_state(place_id=next_dest)
                 if current_state is None:
                     current_state = next_dest_state
