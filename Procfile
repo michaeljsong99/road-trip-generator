@@ -1,1 +1,1 @@
-web: gunicorn wsgi:road-trip-generator
+web: gunicorn wsgi:app
